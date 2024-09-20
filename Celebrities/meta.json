@@ -1,0 +1,113 @@
+{
+    "classes": [
+        {
+            "title": "LeonardoDicaprio",
+            "description": "",
+            "shape": "any",
+            "color": "#00EEC4",
+            "geometry_config": {},
+            "id": 13329284,
+            "hotkey": ""
+        },
+        {
+            "title": "TomCruise",
+            "description": "",
+            "shape": "rectangle",
+            "color": "#FE9A03",
+            "geometry_config": {},
+            "id": 13329285,
+            "hotkey": ""
+        },
+        {
+            "title": "Dicaprio",
+            "description": "",
+            "shape": "rectangle",
+            "color": "#AEFF01",
+            "geometry_config": {},
+            "id": 13329287,
+            "hotkey": ""
+        },
+        {
+            "title": "JenniferLawrence",
+            "description": "",
+            "shape": "rectangle",
+            "color": "#FF03D6",
+            "geometry_config": {},
+            "id": 13329289,
+            "hotkey": ""
+        },
+        {
+            "title": "JohnnyDepp",
+            "description": "",
+            "shape": "rectangle",
+            "color": "#3154F1",
+            "geometry_config": {},
+            "id": 13329290,
+            "hotkey": ""
+        },
+        {
+            "title": "HughJackman",
+            "description": "",
+            "shape": "rectangle",
+            "color": "#3045F6",
+            "geometry_config": {},
+            "id": 13329291,
+            "hotkey": ""
+        },
+        {
+            "title": "NataliePortman",
+            "description": "",
+            "shape": "rectangle",
+            "color": "#FE1301",
+            "geometry_config": {},
+            "id": 13329293,
+            "hotkey": ""
+        },
+        {
+            "title": "RobertDowney",
+            "description": "",
+            "shape": "rectangle",
+            "color": "#FAF218",
+            "geometry_config": {},
+            "id": 13329294,
+            "hotkey": ""
+        },
+        {
+            "title": "BradPitt",
+            "description": "",
+            "shape": "rectangle",
+            "color": "#4A4A4A",
+            "geometry_config": {},
+            "id": 13329296,
+            "hotkey": ""
+        },
+        {
+            "title": "WillSmith",
+            "description": "",
+            "shape": "rectangle",
+            "color": "#00948A",
+            "geometry_config": {},
+            "id": 13329295,
+            "hotkey": ""
+        },
+        {
+            "title": "MeganFox",
+            "description": "",
+            "shape": "rectangle",
+            "color": "#FF6EDC",
+            "geometry_config": {},
+            "id": 13329297,
+            "hotkey": ""
+        }
+    ],
+    "tags": [],
+    "projectType": "images",
+    "projectSettings": {
+        "multiView": {
+            "enabled": false,
+            "tagName": null,
+            "tagId": null,
+            "isSynced": false
+        }
+    }
+}
