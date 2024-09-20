@@ -1,0 +1,41 @@
+{
+    "classes": [
+        {
+            "title": "bbox",
+            "description": "",
+            "shape": "rectangle",
+            "color": "#FF03D6",
+            "geometry_config": {},
+            "id": 13359835,
+            "hotkey": ""
+        },
+        {
+            "title": "mask",
+            "description": "",
+            "shape": "bitmap",
+            "color": "#84A9FB",
+            "geometry_config": {},
+            "id": 13359836,
+            "hotkey": ""
+        },
+        {
+            "title": "keyPoints",
+            "description": "",
+            "shape": "line",
+            "color": "#FF2D00",
+            "geometry_config": {},
+            "id": 13359838,
+            "hotkey": ""
+        }
+    ],
+    "tags": [],
+    "projectType": "images",
+    "projectSettings": {
+        "multiView": {
+            "enabled": false,
+            "tagName": null,
+            "tagId": null,
+            "isSynced": false
+        }
+    }
+}
