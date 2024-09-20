@@ -1,0 +1,35 @@
+{
+    "description": "",
+    "tags": [],
+    "size": {
+        "height": 474,
+        "width": 474
+    },
+    "objects": [
+        {
+            "id": 1591686982,
+            "classId": 13329296,
+            "objectId": null,
+            "description": "",
+            "geometryType": "rectangle",
+            "labelerLogin": "Maximiliano",
+            "createdAt": "2024-09-16T09:19:18.028Z",
+            "updatedAt": "2024-09-16T09:19:18.028Z",
+            "tags": [],
+            "classTitle": "BradPitt",
+            "points": {
+                "exterior": [
+                    [
+                        113,
+                        12
+                    ],
+                    [
+                        391,
+                        322
+                    ]
+                ],
+                "interior": []
+            }
+        }
+    ]
+}
