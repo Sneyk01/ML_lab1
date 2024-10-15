@@ -10,7 +10,7 @@ def debug(text: str):
         print(f'dbg: {text}')
 
 
-class DataSet:
+class Dataset:
     def __init__(self, path, img_size):
         self.answer_array = {}
         answer_id = 0
@@ -23,7 +23,7 @@ class DataSet:
         for line in lines:
             line_elements = line.split(';')
             img_collection = {'Id': int(line_elements[-2]), 'Name': line_elements[-3][1::],
-                              'Data': [int(i) for i in line_elements[0:img_size]]}
+                              'Data': [int(data_element) for data_element in line_elements[0:img_size]]}
             self.dataset_array.append(img_collection)
 
             # Form correct answer list
@@ -47,31 +47,31 @@ class DataSet:
     def get_correct_answer_idx(self, img_type: str):
         return self.answer_array[img_type]
 
+    def find_answer_by_id(self, answer_id: int):
+        for key, val in self.answer_array.items():
+            if val == answer_id:
+                return key
+        return None
+
     @staticmethod
     # Method return prepared img object for recognizing
     def prepare_img_for_recognize(path: str, white_threshold=255):
         # Image must have valid size
         im = Image.open(path)
         pixels = np.asarray(im)
-        pixels2 = np.ndarray((64, 64, 3), dtype='uint8')
         bin_img = []
         for pxl_row_idx in range(im.height):
-            j = 0
             for px in pixels[pxl_row_idx]:
                 # White is 0, black is 1
-                color = 255 if (px[0] >= white_threshold and px[1] >= white_threshold and px[2] >= white_threshold) else 0
-                pixels2[pxl_row_idx, j] = (color, color, color)
-                j += 1
-                bin_img.append(int(not (px[0] >= white_threshold and px[1] >= white_threshold and px[2] >= white_threshold)))
+                bin_img.append(int(not (px[0] >= white_threshold and px[1] >= white_threshold
+                                        and px[2] >= white_threshold)))
 
         im.close()
-        im2 = Image.fromarray(pixels2, 'RGB')
-        im2.show()
-        return {'Id': -1, 'Name':'None', 'Data': bin_img}
+        return {'Id': -1, 'Name': 'None', 'Data': bin_img}
 
 
 class NeuralNetwork:
-    def __init__(self, layers_num: int, perceptron_count: [int], rounds_num=30, learning_speed=0.001):
+    def __init__(self, layers_num: int, perceptron_count: [int]):
         self.layers = []
         self.layers_num = layers_num
 
@@ -83,7 +83,8 @@ class NeuralNetwork:
                                          for _ in range(self.layers[matrix_index])])
                               for matrix_index in range(self.layers_num - 1)]
 
-        self.displacement_vectors = [np.matrix(np.random.rand(self.layers[layer_idx])) for layer_idx in range(1, self.layers_num)]
+        self.displacement_vectors = [np.matrix(np.random.rand(self.layers[layer_idx]))
+                                     for layer_idx in range(1, self.layers_num)]
 
         self.layers_input_data = [None] * (self.layers_num - 1)
         self.layers_t_data = [None] * (self.layers_num - 1)
@@ -91,8 +92,8 @@ class NeuralNetwork:
         # Parameters
         self.sigmoid_a = 1
         self.sigmoid_max_val = 10
-        self.rounds_num = rounds_num
-        self.learning_speed = learning_speed
+        self.rounds_num = 20
+        self.learning_speed = 0.001
 
     # ===================================
     # ===Work with displacement vector===
@@ -179,12 +180,11 @@ class NeuralNetwork:
     # ===================================
     @staticmethod
     def softmax(matrix: np.array, big_nums=False):
-        def min_max_scaler(data, new_min=-20, new_max=20):
-            min_vals = np.min(data)
-            max_vals = np.max(data)
+        def min_max_scaler(data: np.array, new_min=-20, new_max=20):
+            min_val = np.min(data)
+            max_val = np.max(data)
 
-            scaled_data = new_min + (data - min_vals) / (max_vals - min_vals) * (
-                    new_max - new_min)
+            scaled_data = new_min + (data - min_val) / (max_val - min_val) * (new_max - new_min)
 
             return scaled_data
 
@@ -309,23 +309,26 @@ class NeuralNetwork:
             if layer_idx != 0:
                 d_e_to_d_input = self.d_e_respect_to_d_h(d_e_to_d_t, layer_idx)
 
-    def network_education(self, dataset_path: str):
+    def network_education(self, dataset_path: str, rounds_num=30, learning_speed=0.001):
+        self.rounds_num = rounds_num
+        self.learning_speed = learning_speed
+
         img_size = self.layers[0]
         debug(f'Img_size:{img_size}')
-        dataset = DataSet(dataset_path, img_size)
+        ed_dataset = Dataset(dataset_path, img_size)
 
         for round_idx in range(self.rounds_num):
-            random.shuffle(dataset.dataset_array)
+            random.shuffle(ed_dataset.dataset_array)
 
             debug(f'Start {round_idx} round')
-            for img_i in range(dataset.dataset_size):
-                dataset_object = dataset.get_dataset_element(img_i)
+            for img_i in range(ed_dataset.dataset_size):
+                dataset_object = ed_dataset.get_dataset_element(img_i)
 
                 object_data = dataset_object['Data']
                 predict_res, _ = self.predict(object_data)
 
-                correct_answer_idx = dataset.get_correct_answer_idx(dataset_object['Name'])
-                correct_answer = dataset.get_correct_answer(dataset_object['Name'])
+                correct_answer_idx = ed_dataset.get_correct_answer_idx(dataset_object['Name'])
+                correct_answer = ed_dataset.get_correct_answer(dataset_object['Name'])
 
                 predict_err = self.sparse_cross_entropy(predict_res, correct_answer_idx)
 
@@ -340,41 +343,36 @@ if __name__ == "__main__":
     #  INPUT_DIM = 64*64                 #
     #  OUTPUT_DIM = 10                   #
     #  LAYERS_NUM = 3                    #
-    #  NEURONS_NUM_IN_FIRST_LAYER - 512  #
+    #  NEURONS_NUM_IN_FIRST_LAYER - 64  #
     # ================================== #
 
-    # Prepare DataSet
-    dataSet = DataSet('dataSet/Test/annotation.csv', 64*64)
+    # Prepare Dataset
+    dataset = Dataset('dataSet/Test/annotation.csv', 64*64)
 
     # Prepare NeuralNetwork
-    a = NeuralNetwork(3, [4096, 64, 10], rounds_num=30, learning_speed=0.0008)
-    a.load_displacement_vector('dataSet/Learning/vectors64_2.csv')
-    a.load_weights('dataSet/Learning/matrix64_2.csv')
+    a = NeuralNetwork(3, [4096, 64, 10])
+    a.load_displacement_vector('dataSet/parameters/vectors64_2.csv')
+    a.load_weights('dataSet/parameters/matrix64_2.csv')
 
     # Educate NeuralNetwork
-    # a.network_education('dataSet/Learning/annotation.csv')
+    # a.network_education('dataset/Learning/annotation.csv', rounds_num=30, learning_speed=0.0008)
 
     # Save results
-    # a.save_displacement_vector('dataSet/Learning/vectors64_2.csv')
-    # a.save_weights('dataSet/Learning/matrix64_2.csv')
+    # a.save_displacement_vector('dataset/parameters/vectors64_2.csv')
+    # a.save_weights('dataset/parameters/matrix64_2.csv')
 
     # Check accuracy
     counter = 0
-    for i in range(dataSet.dataset_size):
-        predict_element = dataSet.get_dataset_element(i)
+    for i in range(dataset.dataset_size):
+        predict_element = dataset.get_dataset_element(i)
         res, selected = a.predict(predict_element['Data'])
-        debug(f'{selected} | {dataSet.get_correct_answer_idx(predict_element["Name"])}')
-        if selected == dataSet.get_correct_answer_idx(predict_element['Name']):
+        debug(f'{selected} | {dataset.get_correct_answer_idx(predict_element["Name"])}')
+        if selected == dataset.get_correct_answer_idx(predict_element['Name']):
             counter += 1
 
-    print(counter / dataSet.dataset_size)
+    print(f'Accuracy: {counter / dataset.dataset_size}')
 
-    img_obj = dataSet.prepare_img_for_recognize('temp_center_resize.jpg', white_threshold=250)
+    # Check on real example
+    img_obj = dataset.prepare_img_for_recognize('temp_center_resize.jpg', white_threshold=250)
     res, selected = a.predict(img_obj['Data'])
-
-    print(selected)
-
-    for key, val in dataSet.answer_array.items():
-        if val == selected:
-            print(key)
-            break
+    print(f'Answer: {selected}: {dataset.find_answer_by_id(selected)}')
