@@ -363,6 +363,7 @@ if __name__ == "__main__":
     a.save_weights('parameters/matrix64_3.csv')
 
     # Check accuracy
+    # TODO: Add metrics function and delete this block
     counter = 0
     for i in range(dataset.dataset_size):
         predict_element = dataset.get_dataset_element(i)
