@@ -312,6 +312,7 @@ class NeuralNetwork:
     def network_education(self, dataset_path: str, rounds_num=30, learning_speed=0.001):
         self.rounds_num = rounds_num
         self.learning_speed = learning_speed
+        debug(f'Start education with hyperparams: rounds_num={self.rounds_num}, learning_speed={self.learning_speed}')
 
         img_size = self.layers[0]
         debug(f'Img_size:{img_size}')
@@ -351,15 +352,15 @@ if __name__ == "__main__":
 
     # Prepare NeuralNetwork
     a = NeuralNetwork(3, [4096, 64, 10])
-    a.load_displacement_vector('dataSet/parameters/vectors64_2.csv')
-    a.load_weights('dataSet/parameters/matrix64_2.csv')
+    # a.load_displacement_vector('parameters/vectors64_4.csv')
+    # a.load_weights('parameters/matrix64_4.csv')
 
     # Educate NeuralNetwork
-    # a.network_education('dataset/Learning/annotation.csv', rounds_num=30, learning_speed=0.0008)
+    a.network_education('dataset/Learning/annotation.csv', rounds_num=70, learning_speed=0.0004)
 
-    # Save results
-    # a.save_displacement_vector('dataset/parameters/vectors64_2.csv')
-    # a.save_weights('dataset/parameters/matrix64_2.csv')
+    # # Save results
+    a.save_displacement_vector('parameters/vectors64_3.csv')
+    a.save_weights('parameters/matrix64_3.csv')
 
     # Check accuracy
     counter = 0
@@ -375,4 +376,4 @@ if __name__ == "__main__":
     # Check on real example
     img_obj = dataset.prepare_img_for_recognize('temp_center_resize.jpg', white_threshold=250)
     res, selected = a.predict(img_obj['Data'])
-    print(f'Answer: {selected}: {dataset.find_answer_by_id(selected)}')
+    print(f'Answer: {selected}: {dataset.find_answer_by_id(selected)} ({res[selected]})')
