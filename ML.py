@@ -1,6 +1,7 @@
 import random
 import numpy as np
 from PIL import Image
+import matplotlib.pyplot as plt
 
 DEBUG_ENABLE = True
 
@@ -88,6 +89,12 @@ class NeuralNetwork:
 
         self.layers_input_data = [None] * (self.layers_num - 1)
         self.layers_t_data = [None] * (self.layers_num - 1)
+
+        # Metrics
+        self.loss = 0
+        self.accuracy = 0
+        self.average_recall = 0
+        self.average_precision = 0
 
         # Parameters
         self.sigmoid_a = 1
@@ -257,7 +264,7 @@ class NeuralNetwork:
     # ===================================
 
     def predict(self, input_data: np.array):
-        output = [] * self.layers[self.layers_num - 1]  # last layer size
+        output = []
         selected_class = 0
 
         # t - matrix operations res
@@ -318,6 +325,11 @@ class NeuralNetwork:
         debug(f'Img_size:{img_size}')
         ed_dataset = Dataset(dataset_path, img_size)
 
+        accuracy_array = []
+        recall_array = []
+        precision_array = []
+        loss_array = []
+
         for round_idx in range(self.rounds_num):
             random.shuffle(ed_dataset.dataset_array)
 
@@ -338,6 +350,86 @@ class NeuralNetwork:
 
                 self.backward_propagation(predict_res, correct_answer)
 
+            epoch_accuracy, epoch_recall, epoch_precision, loss = self.get_metrics()
+            accuracy_array.append(epoch_accuracy)
+            recall_array.append(epoch_recall)
+            precision_array.append(epoch_precision)
+            loss_array.append(loss)
+
+        epoch_line = [epoch for epoch in range(rounds_num)]
+
+        if DEBUG_ENABLE:
+            plt.subplot(2, 2, 1)
+            plt.title('Accuracy')
+            plt.ylabel('Accuracy')
+            plt.plot(epoch_line, accuracy_array, color='red')
+
+            plt.subplot(2, 2, 2)
+            plt.title('Recall')
+            plt.ylabel('Recall')
+            plt.plot(epoch_line, recall_array, color='orange')
+
+            plt.subplot(2, 2, 3)
+            plt.title('Precision')
+            plt.xlabel('Epoch')
+            plt.ylabel('Precision')
+            plt.plot(epoch_line, precision_array, color='purple')
+
+            plt.subplot(2, 2, 4)
+            plt.title('Loss')
+            plt.xlabel('Epoch')
+            plt.ylabel('Loss')
+            plt.plot(epoch_line, loss_array, color='blue')
+            plt.show()
+
+    def get_metrics(self, validate_dataset_path='dataSet/Test/annotation.csv'):
+        validate_img_size = self.layers[0]
+        validate_dataset = Dataset(validate_dataset_path, validate_img_size)
+
+        # 0: Try recognition; 1: False recognition; 2: Miss recognition
+        metric_for_classes = np.zeros([10, 3])
+        loss_collection = 0
+
+        for validate_image_idx in range(validate_dataset.dataset_size):
+            validate_element = validate_dataset.get_dataset_element(validate_image_idx)
+            predict_res, selected_element = self.predict(validate_element['Data'])
+
+            validate_answer_idx = validate_dataset.get_correct_answer_idx(validate_element['Name'])
+
+            loss_collection += self.sparse_cross_entropy(predict_res, validate_answer_idx)
+
+            if validate_answer_idx == selected_element:
+                metric_for_classes[validate_answer_idx][0] += 1
+            else:
+                metric_for_classes[validate_answer_idx][1] += 1
+                metric_for_classes[selected_element][2] += 1
+
+        true_recognition_count = 0
+        for metric in metric_for_classes:
+            true_recognition_count += metric[0]
+        self.accuracy = true_recognition_count / validate_dataset.dataset_size
+
+        self.loss = loss_collection / validate_dataset.dataset_size
+
+        recall_array = []
+        precision_array = []
+        for class_idx in range(len(metric_for_classes)):
+            # Zero division protection
+            if metric_for_classes[class_idx][0] != 0:
+                recall_array.append(metric_for_classes[class_idx][0] /
+                                    (metric_for_classes[class_idx][0] + metric_for_classes[class_idx][2]))
+                precision_array.append(metric_for_classes[class_idx][0] /
+                                       (metric_for_classes[class_idx][0] + metric_for_classes[class_idx][1]))
+            else:
+                recall_array.append(0)
+                precision_array.append(0)
+        self.average_recall = np.sum(recall_array) / len(metric_for_classes)
+        self.average_precision = np.sum(precision_array) / len(metric_for_classes)
+
+        debug(f'Epoch result: accuracy:{self.accuracy:.6} '
+              f'precision:{self.average_precision:.6} recall:{self.average_recall:.6} loss:{self.loss:.6}')
+        return self.accuracy, self.average_recall, self.average_precision, self.loss
+
 
 if __name__ == "__main__":
     # ===========Hyper params=========== #
@@ -356,11 +448,11 @@ if __name__ == "__main__":
     # a.load_weights('parameters/matrix64_4.csv')
 
     # Educate NeuralNetwork
-    a.network_education('dataset/Learning/annotation.csv', rounds_num=70, learning_speed=0.0004)
+    a.network_education('dataset/Learning/annotation.csv', rounds_num=60, learning_speed=0.0005)
 
     # # Save results
-    a.save_displacement_vector('parameters/vectors64_3.csv')
-    a.save_weights('parameters/matrix64_3.csv')
+    a.save_displacement_vector('parameters/vectors64_5.csv')
+    a.save_weights('parameters/matrix64_5.csv')
 
     # Check accuracy
     # TODO: Add metrics function and delete this block
@@ -373,6 +465,8 @@ if __name__ == "__main__":
             counter += 1
 
     print(f'Accuracy: {counter / dataset.dataset_size}')
+
+    a.get_metrics()
 
     # Check on real example
     img_obj = dataset.prepare_img_for_recognize('temp_center_resize.jpg', white_threshold=250)
