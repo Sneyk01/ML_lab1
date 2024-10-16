@@ -1,10 +1,14 @@
 import ctypes
+import os
 import tkinter as tk
 from tkinter import ttk
 from tkinter import filedialog
 from PIL import ImageGrab
 from PIL import ImageTk
 from PIL import Image
+from PIL.Image import Resampling
+
+from ML import NeuralNetwork, Dataset
 
 
 class Pixel:
@@ -24,40 +28,83 @@ class PaintApp:
         self.canvas_height = 320
         self.canvas = tk.Canvas(self.root, width=self.canvas_width, height=self.canvas_height, bg="white", bd=1, relief=tk.SUNKEN)
         self.canvas.pack(side=tk.LEFT, expand=False)
+
+        self.neural_network = None
+        self.init_neural_network()
+        self.rounds_num = 20
+        self.learning_speed = 0.001
+
+        self.dataset = None
+        self.init_dataset()
+
+        self.navbar = None
+        self.weights_menu = None
         self.setup_navbar()
+
+        self.selected_tool = "pen"
+        self.colors = ["black", "white"]
+        self.selected_color = self.colors[0]
+        self.brush_sizes = [4, 6, 8, 10]
+        self.selected_size = self.brush_sizes[1]
+        self.pen_types = ["line", "round", "square"]
+        self.selected_pen_type = self.pen_types[1]
+
+        self.tool_frame = None
+        self.brush_size_label = None
+        self.brush_size_combobox = None
+        self.color_label = None
+        self.color_combobox = None
+        self.pen_type_label = None
+        self.pen_type_combobox = None
+        self.clear_button = None
+        self.save_button = None
+        self.center_button = None
+        self.metrics_frame = None
+        self.accuracy = None
+        self.precision = None
+        self.recall = None
+        self.loss = None
+        self.ml_frame = None
+        self.img_class = None
+        self.recognize_button = None
+        self.era_box = None
+        self.learning_speed_box = None
+        self.start_ml = None
         self.setup_tools()
+
         self.setup_events()
         self.prev_x = None
         self.prev_y = None
+
+    def init_neural_network(self):
+        self.neural_network = NeuralNetwork(3, [4096, 64, 10])
+        self.neural_network.load_displacement_vector('parameters/vectors64_4.csv')
+        self.neural_network.load_weights('parameters/matrix64_4.csv')
+
+    def init_dataset(self):
+        self.dataset = Dataset('dataSet/Test/annotation.csv', 64*64)
 
     def setup_navbar(self):
         self.navbar = tk.Menu(self.root)
         self.root.config(menu=self.navbar)
 
-        # File menu
-        self.file_menu = tk.Menu(self.navbar, tearoff=False)
-        # self.navbar.add_cascade(label="File", menu=self.file_menu)
-        self.navbar.add_command(label="Save Snapshot", command=self.take_snapshot)
-        self.navbar.add_command(label="Save weight", command=self.save_weight)
-        self.navbar.add_command(label="Load weight", command=self.load_weight)
+        # Image menu
         self.navbar.add_command(label="Load image", command=self.load_img)
-        # self.file_menu.add_separator()
-        self.navbar.add_command(label="Exit", command=self.root.quit)
+
+        # Weight Menu
+        self.weights_menu = tk.Menu(self.navbar, tearoff=False)
+        self.navbar.add_cascade(label="Weights", menu=self.weights_menu)
+        self.weights_menu.add_command(label="Save weight", command=self.save_weight)
+        self.weights_menu.add_command(label="Load weight", command=self.load_weight)
 
         # Edit menu
         # self.edit_menu = tk.Menu(self.navbar, tearoff=False)
         # self.navbar.add_cascade(label="Edit", menu=self.edit_menu)
-        # self.edit_menu.add_command(label="Undo", command=self.undo)
+        self.navbar.add_command(label="Undo", command=self.undo)
+
+        self.navbar.add_command(label="Exit", command=self.root.quit)
 
     def setup_tools(self):
-        self.selected_tool = "pen"
-        self.colors = ["black", "red", "green", "blue", "yellow", "orange", "purple", "white"]
-        self.selected_color = self.colors[0]
-        self.brush_sizes = [2, 4, 6, 8]
-        self.selected_size = self.brush_sizes[1]
-        self.pen_types = ["line", "round", "square", "arrow", "diamond"]
-        self.selected_pen_type = self.pen_types[1]
-
         self.tool_frame = ttk.LabelFrame(self.root, text="Tools")
         self.tool_frame.pack(side=tk.RIGHT, padx=5, pady=5, fill=tk.Y)
 
@@ -88,9 +135,6 @@ class PaintApp:
         self.clear_button = ttk.Button(self.tool_frame, text="Clear Canvas", command=self.clear_canvas)
         self.clear_button.pack(side=tk.TOP, padx=5, pady=5)
 
-        self.recognize_button = ttk.Button(self.tool_frame, text="Recognize img", command=self.recognize_img)
-        self.recognize_button.pack(side=tk.TOP, padx=5, pady=5)
-
         self.save_button = ttk.Button(self.tool_frame, text="Save img", command=self.save_img)
         self.save_button.pack(side=tk.TOP, padx=5, pady=5)
 
@@ -117,21 +161,33 @@ class PaintApp:
         self.ml_frame = ttk.LabelFrame(self.root, text="ML")
         self.ml_frame.pack(side=tk.RIGHT, padx=5, pady=5, fill=tk.Y)
 
-        self.era_box_label = ttk.Label(self.ml_frame, text="Number of epochs:")
-        self.era_box_label.pack(side=tk.TOP, padx=5, pady=5)
+        recognize_label = ttk.Label(self.ml_frame, text="Recognition result:")
+        recognize_label.pack(side=tk.TOP, padx=5, pady=5)
 
-        self.era_box = ttk.Spinbox(self.ml_frame, from_=10, to=120)
-        self.era_box.set(100)
+        self.img_class = ttk.Label(self.ml_frame, text="None")
+        self.img_class.pack(side=tk.TOP, padx=5, pady=0)
+
+        self.recognize_button = ttk.Button(self.ml_frame, text="Recognize img", command=self.recognize_img)
+        self.recognize_button.pack(side=tk.TOP, padx=5, pady=10)
+
+        separator_ml = ttk.Label(self.ml_frame, text="___________")
+        separator_ml.pack(side=tk.TOP, padx=5, pady=0)
+
+        era_box_label = ttk.Label(self.ml_frame, text="Number of epochs:")
+        era_box_label.pack(side=tk.TOP, padx=5, pady=5)
+
+        self.era_box = ttk.Spinbox(self.ml_frame, from_=5, to=100)
+        self.era_box.set(self.rounds_num)
         self.era_box.pack(side=tk.TOP, padx=5, pady=5)
 
-        self.learning_speed_label = ttk.Label(self.ml_frame, text="Learning speed:")
-        self.learning_speed_label.pack(side=tk.TOP, padx=5, pady=5)
+        learning_speed_label = ttk.Label(self.ml_frame, text="Learning speed:")
+        learning_speed_label.pack(side=tk.TOP, padx=5, pady=5)
 
-        self.learning_speed_box = ttk.Spinbox(self.ml_frame, from_=10, to=120)
-        self.learning_speed_box.set(100)
+        self.learning_speed_box = ttk.Spinbox(self.ml_frame, from_=0.0001, to=1, increment=0.0001)
+        self.learning_speed_box.set(self.learning_speed)
         self.learning_speed_box.pack(side=tk.TOP, padx=5, pady=5)
 
-        self.start_ml = ttk.Button(self.ml_frame, text="Start ml", command=self.save_img)
+        self.start_ml = ttk.Button(self.ml_frame, text="Start ml", command=self.start_learning)
         self.start_ml.pack(side=tk.TOP, padx=5, pady=5)
 
     def setup_events(self):
@@ -148,19 +204,66 @@ class PaintApp:
         self.selected_pen_type = pen_type
 
     def recognize_img(self):
-        return
+        self.center_photo()
+        img_obj = Dataset.prepare_img_for_recognize('temp_center_resize.jpg', white_threshold=250)
+        res, selected = self.neural_network.predict(img_obj['Data'])
+        img_class = self.dataset.find_answer_by_id(selected)
+        self.img_class.config(text=f"{img_class}")
+        print(f'Answer: {selected}: {img_class} ({res[selected]:.3})')
+
+    def start_learning(self):
+        # Update hyper params
+        self.rounds_num = int(self.era_box.get())
+        self.learning_speed = float(self.learning_speed_box.get())
+
+        # Start learning
+        dataset_path = 'dataset/Learning/annotation.csv'
+        self.neural_network.network_education(dataset_path, rounds_num=self.rounds_num,
+                                              learning_speed=self.learning_speed)
+
+        # Check accuracy
+        accuracy_counter = 0
+        for i in range(self.dataset.dataset_size):
+            predict_element = self.dataset.get_dataset_element(i)
+            res, selected = self.neural_network.predict(predict_element['Data'])
+            if selected == self.dataset.get_correct_answer_idx(predict_element['Name']):
+                accuracy_counter += 1
+
+        accuracy = accuracy_counter / self.dataset.dataset_size
+        self.accuracy.config(text=f"Accuracy:{accuracy:.3}")
+        print(f'Accuracy: {accuracy}')
 
     def save_img(self):
-        self.take_snapshot()
+        self.take_screenshot()
 
     def save_weight(self):
-        return
+        self.neural_network.save_displacement_vector('parameters/vectors64_gui.csv')
+        self.neural_network.save_weights('parameters/matrix64_gui.csv')
 
     def load_weight(self):
-        return
+        file_types = [("CSV Files", "*.csv"), ("Text Files", "*.txt"), ("All Files", "*.*")]
+        initial_dir = os.path.expanduser("parameters/")
+
+        vector_path = filedialog.askopenfilename(title="Select vector weight path",
+                                                 filetypes=file_types, initialdir=initial_dir)
+        if vector_path != "":
+            self.neural_network.load_displacement_vector(vector_path)
+        else:
+            print('Bad data!')
+            return
+
+        matrix_path = filedialog.askopenfilename(title="Select matrix weight path",
+                                                 filetypes=file_types, initialdir=initial_dir)
+        if matrix_path != "":
+            self.neural_network.load_weights(matrix_path)
+        else:
+            print('Bad data!')
+            return
 
     def load_img(self):
-        img_path = filedialog.askopenfilename()
+        file_types = [("PNG Files", "*.png"), ("JPEG Files", "*.jpeg"), ("All Files", "*.*")]
+
+        img_path = filedialog.askopenfilename(title="Select image", filetypes=file_types)
         if img_path != "":
             global imageCanvas
             imageCanvas = ImageTk.PhotoImage(file=img_path)
@@ -212,9 +315,10 @@ class PaintApp:
         self.prev_y = None
 
     def clear_canvas(self):
+        self.img_class.config(text=f"None")
         self.canvas.delete("all")
 
-    def take_snapshot(self):
+    def take_screenshot(self):
         # self.canvas.postscript(file="snapshot.eps")
         # img = Image.open("snapshot.eps")
         # img.save("temp.png", 'png')
@@ -222,10 +326,10 @@ class PaintApp:
         y = root.winfo_rooty()+self.canvas.winfo_y() + 3
         x1 = x + self.canvas.winfo_height() - 6
         y1 = y + self.canvas.winfo_width() - 6
-        ImageGrab.grab().crop((x, y, x1, y1)).resize((320, 320)).save('temp.jpg', 'JPEG')
+        ImageGrab.grab().crop((x, y, x1, y1)).resize((320, 320), resample=Resampling.BOX).save('temp.jpg', 'JPEG', quality=100, subsampling=0)
 
     def center_photo(self):
-        self.take_snapshot()
+        self.take_screenshot()
 
         global imageCanvas
         im = Image.open('temp.jpg')
@@ -269,8 +373,8 @@ class PaintApp:
                 x_counter += 1
             y_counter += 1
 
-        new_img.save('temp_center.jpg', 'JPEG')
-        new_img.resize((64, 64)).save('temp_center_resize.jpg', 'JPEG')
+        new_img.save('temp_center.jpg', 'JPEG', quality=100, subsampling=0)
+        new_img.resize((64, 64), resample=Resampling.HAMMING).save('temp_center_resize.jpg', 'JPEG', quality=100, subsampling=0)
 
         imageCanvas = ImageTk.PhotoImage(file='temp_center.jpg')
         self.clear_canvas()
