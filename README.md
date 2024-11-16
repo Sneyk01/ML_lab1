@@ -4,4 +4,4 @@ ML_lab1 - dataset
 
 ML_lab2 - own neural network realization
 
-ML_lab3 - logos-recognizer notebook
+ML_lab3 - logos-recognizer notebook *(logos-recognizer.ipynb)*
